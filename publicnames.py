@@ -3,19 +3,19 @@
 
 def netunicode (s, sb):
     sb.append(str(len(s)))
-    sb.append(":")
+    sb.append(u":")
     sb.append(s)
-    sb.append(",")
+    sb.append(u",")
     return sb
 
 def netunicodes (list):
     sb = []
     for s in list:
         sb.append(str(len(s)))
-        sb.append(":")
+        sb.append(u":")
         sb.append(s)
-        sb.append(",")
-    return "".join(sb)
+        sb.append(u",")
+    return u"".join(sb)
 
 def netunidecodes (text, strip=True):
     size = len(text)
@@ -108,7 +108,7 @@ def pnsValidateAndOutline (names, outline, field, horizon):
             o = []
             s = pnsValidateAndOutline (n, o, field, horizon)
             if (s != None):
-                if (o.len > 1):
+                if (len(o) > 1):
                     outline.append(o)
                 else:
                     outline.append(o[0])
@@ -146,6 +146,12 @@ def walk(encoded, store):
                 graph.setdefault(key, set()).add(name)
     return graph
 
+def weight(graph):
+    weights = {}
+    for k in graph.keys():
+        weights.setdefault(len(graph[k]),set()).add(k)
+    return weights
+
 class PublicNames:
     HORIZON = 30
     def __init__(self, encoded, field=(), horizon=HORIZON):
@@ -160,11 +166,8 @@ class PublicNames:
             return index(self.encoded, store, field, horizon)
     def walk(self, store, field=(), horizon=HORIZON):
         if self.isValid():
-            return walk(self.encoded, store, field, horizon)
+            return weight(walk(self.encoded, store, field, horizon))
 
 def validate(encoded):
     return PublicNames(encoded)
 
-class PublicGraph:
-    def __init__ (self, graph):
-        self.graph = graph

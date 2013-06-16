@@ -1,3 +1,6 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
 import publicnames as pns
 import unittest
 
@@ -93,6 +96,11 @@ class TestPublicNames(unittest.TestCase):
             u"17:5:Names,6:Public,,3:The,"
             )
         self.assertEqual(field, set((u"Names", u"Public", u"The" , u"5:Names,6:Public,")))
+
+    def test_pnsValidAndOutline(self): 
+        outline = []
+        pns.pnsValidateAndOutline(pns.parse("17:5:Names,6:Public,,3:The,"), outline, set(), 4)
+        self.assertEqual(outline, [["Names","Public"],"The"])
 
 if __name__ == '__main__':
     unittest.main()
