@@ -2,114 +2,169 @@
 # -*- coding: utf-8 -*-
 
 def netunicode (s, sb):
-    sb.push(s.length)
-    sb.push(":")
-    sb.push(s)
-    sb.push(",")
+    sb.append(str(len(s)))
+    sb.append(":")
+    sb.append(s)
+    sb.append(",")
     return sb
 
 def netunicodes (list):
-    s, sb = []
+    sb = []
     for s in list:
-        sb.push(s.length)
-        sb.push(":")
-        sb.push(s)
-        sb.push(",")
-    return sb.join('')
+        sb.append(str(len(s)))
+        sb.append(":")
+        sb.append(s)
+        sb.append(",")
+    return "".join(sb)
 
-def netunidecodes (buffer, list, strip):
-    size = buffer.length
+def netunidecodes (text, strip=True):
+    size = len(text)
     prev = 0
-    pos, L, next
     while (prev < size):
-        pos = buffer.indexOf(":", prev)
-        if (pos < 1):
-			prev = size
-		else: 
-            L = parseInt(buffer.substring(prev, pos))
-            if (isNaN(L)):
-				prev = size
-			else:
-                next = pos + L + 1
-                if (next >= size):
-					prev = size
-				else if (buffer.charAt(next) != ","):
-					prev = size
-				else:
-					if (list === None):
-						list = []
-					if (strip | next-pos>1):
-						list.push(buffer.substring(pos+1, next))
-					prev = next + 1
-    return list
+        pos = text.find(u":", prev)
+        if (pos < 0):
+            break
+
+        try:
+            L = int(text[prev:pos])
+        except:
+            L = 0
+        if L > 0:
+            next = pos + L + 1
+            if (next >= size or text[next] != u","):
+                break
+
+            elif (strip or next-pos > 1):
+                yield text[pos+1:next]
+
+            prev = next + 1
+        else:
+            break
+
+def parse(text):
+    return list(netunidecodes(text))
+
+def pnsOutline (names):
+    valid = []
+    for name in names:
+        if not name:
+            continue
+
+        n = parse(name)
+        if (len(n) == 0):
+            valid.append(name)
+        else:
+            l = pnsOutline (n)
+            if (l != None):
+                valid.append(l)
+    if (len(valid) > 1):
+        return valid
+
+    if (len(valid) > 0):
+        return valid[0]
+
+def outline(encoded):
+    names = parse(encoded)
+    if names:
+        return pnsOutline(names)
 
 def pnsValidate (names, field, horizon):
-    n, s, valid=[]
+    valid = []
     for name in names:
-        if (length(name) === 0 || name in field):
-			continue
+        if (len(name) == 0 or name in field):
+            continue
 
-        n = netunidecodes (name, None, True)
-        if (n === None):
-            valid.push(name)
-            field[name] = True
+        n = parse (name)
+        if (len(n) == 0):
+            valid.append(name)
+            field.add(name)
         else:
             s = pnsValidate (n, field, horizon)
-            if (s !== None):
-                valid.push(s)
-                field[s] = True
-        if (length(field) > horizon):
-			return None
+            if (s != None):
+                valid.append(s)
+                field.add(s)
+        if (len(field) > horizon):
+            return None
 
-    if (length(valid) > 1):
+    if (len(valid) > 1):
         valid.sort()
         return netunicodes(valid)
 
-    if (length(length) > 0):
+    if (len(valid) > 0):
         return valid[0]
-
-    return None
-}
 
 def pnsValidateAndOutline (names, outline, field, horizon):
-    n, s, valid = []
+    valid = []
     for name in names:
-        if (length(name) === 0 || name in field):
-			continue
+        if (len(name) == 0 or name in field):
+            continue
 
-        n = netunidecodes (name, None, True)
-        if (n === None):
-			outline.push(name)
-            valid.push(name)
-            field[name] = True
+        n = parse(name)
+        if (len(n) == 0):
+            outline.append(name)
+            valid.append(name)
+            field.add(name)
         else:
-			o = []
+            o = []
             s = pnsValidateAndOutline (n, o, field, horizon)
-            if (s !== None):
-				if (o.length > 1):
-					outline.push(o)
-				else:
-					outline.push(o[0])
-                valid.push(s)
-                field[s] = True
-        if (length(field) > horizon):
-			return None;
+            if (s != None):
+                if (o.len > 1):
+                    outline.append(o)
+                else:
+                    outline.append(o[0])
+                valid.append(s)
+                field.add(s)
+        if (len(field) > horizon):
+            return None;
 
-    if (length(valid) > 1):
+    if (len(valid) > 1):
         valid.sort()
         return netunicodes(valid)
 
-    if (length(valid) > 0):
+    if (len(valid) > 0):
         return valid[0]
 
-    return None;
+def index(encoded, store, field=(), horizon=30):
+    names = parse(encoded)
+    if names:
+        for name in names:
+            i = store.get(name)
+            if i:
+                i = pnsValidate((encoded, i), field, horizon)
+                if i:
+                    store[name] = i
+            else:
+                store[name] = encoded
+                index(name, store)
+
+def walk(encoded, store):
+    graph = {}
+    for name in netunidecodes(encoded):
+        i = store[name]
+        if i:
+            for key in netunidecodes(i):
+                graph.setdefault(key, set()).add(name)
+    return graph
 
 class PublicNames:
-	def __init__(self, encoded, field=(), horizon=30):
+    HORIZON = 30
+    def __init__(self, encoded, field=(), horizon=HORIZON):
         self.encoded = encoded
-		self.field = set(field)
-        self.horizon = horizon
-		self.outline = []
+        self.field = set(field)
+        self.outline = []
         self.valid = pnsValidateAndOutline(encoded, outline, field, horizon)
     def isValid(self):
         return self.encoded == self.valid
+    def index(self, store, field=(), horizon=HORIZON):
+        if self.isValid():
+            return index(self.encoded, store, field, horizon)
+    def walk(self, store, field=(), horizon=HORIZON):
+        if self.isValid():
+            return walk(self.encoded, store, field, horizon)
+
+def validate(encoded):
+    return PublicNames(encoded)
+
+class PublicGraph:
+    def __init__ (self, graph):
+        self.graph = graph
